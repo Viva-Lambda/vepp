@@ -69,10 +69,13 @@ public:
     }
   }
   /*! Tested */
-  std::size_t size() const { return vdata.size(); }
+  bool size(std::size_t &out) const {
+    out = vdata.size();
+    return true;
+  }
   /*! Tested */
   bool get(unsigned int index, T &out) const {
-    if (index >= size()) {
+    if (index >= vdata.size()) {
       return false;
     }
     out = vdata[index];
@@ -80,7 +83,7 @@ public:
   }
   /*! Tested */
   bool set(unsigned int index, T el) {
-    if (index >= size()) {
+    if (index >= vdata.size()) {
       return false;
     }
     vdata[index] = el;
@@ -93,8 +96,10 @@ public:
     if (base_order >= nb_dimensions)
       return false;
     //
-    out.clear();
-    out.resize(static_cast<std::size_t>(nb_dimensions));
+    if (out.size() != nb_dimensions) {
+      out.clear();
+      out.resize(static_cast<std::size_t>(nb_dimensions));
+    }
     for (unsigned int i = 0; i < nb_dimensions; i++) {
       out[i] = static_cast<T>(0);
     }
@@ -114,7 +119,9 @@ public:
   }
   /*! Tested */
   bool add(T v, std::vector<T> &out) const {
-    out.resize(vdata.size());
+    if (out.size() != vdata.size()) {
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       out[i] = vdata[i] + v;
     }
@@ -134,7 +141,9 @@ public:
            std::vector<T> &out) const {
     if (v.size() != vdata.size())
       return false;
-    out.resize(vdata.size());
+    if (vdata.size() != out.size(){
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       out[i] = vdata[i] + v[i];
     }
@@ -142,9 +151,15 @@ public:
   }
   /*! Tested */
   bool add(const VecN<T> &v, VecN<T> &out) const {
-    if (v.size() != vdata.size())
+    std::size_t vsize;
+    v.size(vsize);
+    if (vsize != vdata.size())
       return false;
-    out = VecN<T>(static_cast<unsigned int>(vdata.size()));
+    out.size(vsize);
+    if (vsize != vdata.size()) {
+      out =
+          VecN<T>(static_cast<unsigned int>(vdata.size()));
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       T vout = static_cast<T>(0);
       v.get(i, vout);
