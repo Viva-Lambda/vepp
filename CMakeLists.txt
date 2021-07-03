@@ -11,6 +11,7 @@ set (CMAKE_BUILD_TYPE "Release")
 
 set (CMAKE_CXX_FLAGS "-std=c++98")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ggdb -Wall -Wextra -ldl")
+set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 
 # include test suite

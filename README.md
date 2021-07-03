@@ -38,9 +38,11 @@ int main(){
   return 0;
 }
 ```
+
 As you might have guessed, we never throw exceptions. So `throw` does not
-occur in anywhere in code. No explicit use of `new` and `delete` either.
-We don't resize output vectors if they are correctly sized. For example:
+occur anywhere in code. No explicit use of `new` and `delete` either.
+We don't resize output vectors if they are correctly sized as well. 
+For example:
 
 ```c++
 #include <ostream>

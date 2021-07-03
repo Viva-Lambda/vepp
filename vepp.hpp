@@ -141,7 +141,7 @@ public:
            std::vector<T> &out) const {
     if (v.size() != vdata.size())
       return false;
-    if (vdata.size() != out.size(){
+    if (vdata.size() != out.size()) {
       out.resize(vdata.size());
     }
     for (unsigned int i = 0; i < vdata.size(); i++) {
@@ -238,6 +238,6 @@ public:
     return true;
   }
 };
-}
+} // namespace vepp
 
 #endif
