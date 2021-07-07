@@ -90,8 +90,7 @@ public:
     return true;
   }
   /*! Tested */
-  static bool base(unsigned int nb_dimensions,
-                   unsigned int base_order,
+  static bool base(unsigned int nb_dimensions, unsigned int base_order,
                    std::vector<T> &out) {
     if (base_order >= nb_dimensions)
       return false;
@@ -107,11 +106,10 @@ public:
     return true;
   }
   /*! Tested */
-  static bool base(unsigned int nb_dimensions,
-                   unsigned int base_order, VecN<T> &vout) {
+  static bool base(unsigned int nb_dimensions, unsigned int base_order,
+                   VecN<T> &vout) {
     std::vector<T> out;
-    bool result =
-        VecN<T>::base(nb_dimensions, base_order, out);
+    bool result = VecN<T>::base(nb_dimensions, base_order, out);
     if (result == false)
       return result;
     vout = VecN<T>(out);
@@ -137,8 +135,7 @@ public:
     return true;
   }
   /*! Tested */
-  bool add(const std::vector<T> &v,
-           std::vector<T> &out) const {
+  bool add(const std::vector<T> &v, std::vector<T> &out) const {
     if (v.size() != vdata.size())
       return false;
     if (vdata.size() != out.size()) {
@@ -157,8 +154,7 @@ public:
       return false;
     out.size(vsize);
     if (vsize != vdata.size()) {
-      out =
-          VecN<T>(static_cast<unsigned int>(vdata.size()));
+      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
     }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       T vout = static_cast<T>(0);
@@ -170,61 +166,175 @@ public:
 
   //
   bool subtract(T v, std::vector<T> &out) const {
-    out.resize(vdata.size());
+    if (out.size() != vdata.size()) {
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       out[i] = vdata[i] - v;
     }
     return true;
   }
-  bool subtract(const std::vector<T> &v,
-                std::vector<T> &out) const {
+  /*! Tested */
+  bool subtract(T v, VecN<T> &vout) const {
+    std::vector<T> out;
+    bool result = subtract(v, out);
+    if (result == false)
+      return result;
+    vout = VecN<T>(out);
+    return true;
+  }
+  /*! Tested */
+  bool subtract(const std::vector<T> &v, std::vector<T> &out) const {
     if (v.size() != vdata.size())
       return false;
-    out.resize(vdata.size());
+    if (vdata.size() != out.size()) {
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] - v;
+      out[i] = vdata[i] - v[i];
     }
     return true;
   }
+  /*! Tested */
+  bool subtract(const VecN<T> &v, VecN<T> &out) const {
+    std::size_t vsize;
+    v.size(vsize);
+    if (vsize != vdata.size())
+      return false;
+    out.size(vsize);
+    if (vsize != vdata.size()) {
+      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
+    }
+    for (unsigned int i = 0; i < vdata.size(); i++) {
+      T vout = static_cast<T>(0);
+      v.get(i, vout);
+      out.set(i, vdata[i] - vout);
+    }
+    return true;
+  }
+  //
   bool multiply(T v, std::vector<T> &out) const {
-    out.resize(vdata.size());
+    if (out.size() != vdata.size()) {
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       out[i] = vdata[i] * v;
     }
     return true;
   }
-  bool multiply(std::vector<T> &v,
-                std::vector<T> &out) const {
+  /*! Tested */
+  bool multiply(T v, VecN<T> &vout) const {
+    std::vector<T> out;
+    bool result = multiply(v, out);
+    if (result == false)
+      return result;
+    vout = VecN<T>(out);
+    return true;
+  }
+  /*! Tested */
+  bool multiply(const std::vector<T> &v, std::vector<T> &out) const {
     if (v.size() != vdata.size())
       return false;
-
-    out.resize(vdata.size());
+    if (vdata.size() != out.size()) {
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] * v;
+      out[i] = vdata[i] * v[i];
     }
     return true;
   }
+  /*! Tested */
+  bool multiply(const VecN<T> &v, VecN<T> &out) const {
+    std::size_t vsize;
+    v.size(vsize);
+    if (vsize != vdata.size())
+      return false;
+    out.size(vsize);
+    if (vsize != vdata.size()) {
+      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
+    }
+    for (unsigned int i = 0; i < vdata.size(); i++) {
+      T vout = static_cast<T>(0);
+      v.get(i, vout);
+      out.set(i, vdata[i] * vout);
+    }
+    return true;
+  }
+
+  //
   bool divide(T v, std::vector<T> &out) const {
     if (v == static_cast<T>(0))
       return false;
-    out.resize(vdata.size());
+
+    if (out.size() != vdata.size()) {
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       out[i] = vdata[i] / v;
     }
     return true;
   }
-  bool divide(const std::vector<T> &v,
-              std::vector<T> &out) const {
-    if (v.size() != vdata.size())
+  /*! Tested */
+  bool divide(T v, VecN<T> &vout) const {
+    // check for zero division
+    if (v == static_cast<T>(0))
       return false;
 
+    std::vector<T> out;
+    bool result = divide(v, out);
+    if (result == false)
+      return result;
+    vout = VecN<T>(out);
+    return true;
+  }
+  /*! Tested */
+  bool divide(const std::vector<T> &v, std::vector<T> &out) const {
+    if (v.size() != vdata.size())
+      return false;
     for (unsigned int j = 0; j < v.size(); j++) {
       if (v[j] == static_cast<T>(0))
         return false;
     }
-    out.resize(vdata.size());
+    if (vdata.size() != out.size()) {
+      out.resize(vdata.size());
+    }
     for (unsigned int i = 0; i < vdata.size(); i++) {
       out[i] = vdata[i] / v[i];
+    }
+    return true;
+  }
+  /*! Tested */
+  bool divide(const VecN<T> &v, VecN<T> &out) const {
+    std::size_t vsize;
+    v.size(vsize);
+    // check size
+    if (vsize != vdata.size())
+      return false;
+    // check zero division
+    for (unsigned int j = 0; j < vsize; j++) {
+      T vout = static_cast<T>(0);
+      v.get(j, vout);
+      if (vout == static_cast<T>(0))
+        return false;
+    }
+    // check out size
+    out.size(vsize);
+    if (vsize != vdata.size()) {
+      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
+    }
+    // do op
+    for (unsigned int i = 0; i < vdata.size(); i++) {
+      T vout = static_cast<T>(0);
+      v.get(i, vout);
+      out.set(i, vdata[i] / vout);
+    }
+    return true;
+  }
+
+  bool dot(const T &v, T &out) const {
+    out = static_cast<T>(0);
+    for (unsigned int i = 0; i < vdata.size(); i++) {
+      out += vdata[i] * v;
     }
     return true;
   }
@@ -235,6 +345,40 @@ public:
     for (unsigned int i = 0; i < vdata.size(); i++) {
       out += vdata[i] * v[i];
     }
+    return true;
+  }
+  bool dot(const VecN<T> &v, T &out) const {
+
+    std::size_t vsize;
+    v.size(vsize);
+    // check size
+    if (vsize != vdata.size())
+      return false;
+
+    out = static_cast<T>(0);
+    for (unsigned int i = 0; i < vdata.size(); i++) {
+      T tout = static_cast<T>(0);
+      v.get(i, tout);
+      out += vdata[i] * tout;
+    }
+    return true;
+  }
+
+  // bool cross(const std::vector<T> &v, std::vector<T> &out) const {}
+
+private:
+  bool n_n_matrix(unsigned int n, std::vector<std::vector<T> > &out) const {
+    std::vector<std::vector<T> > mat;
+    mat.resize(n);
+    for (unsigned int i = 0; i < n; i++) {
+      std::vector<T> row;
+      row.resize(n);
+      mat[i] = row;
+      for (unsigned int j = 0; j < n; j++) {
+        mat[i][j] = static_cast<T>(0);
+      }
+    }
+    out = mat;
     return true;
   }
 };
