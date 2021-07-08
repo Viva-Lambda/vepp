@@ -37,6 +37,7 @@ SOFTWARE.
 
 #ifndef VEPP_HPP
 #define VEPP_HPP
+#include <functional>
 #include <math.h>
 #include <ostream>
 #include <stdio.h>
@@ -52,13 +53,7 @@ public:
   /*! Tested */
   VecN() {}
   /*! Tested */
-  VecN(const std::vector<T> &vd) {
-    vdata.clear();
-    vdata.resize(vd.size());
-    for (unsigned int i = 0; i < vd.size(); i++) {
-      vdata[i] = vd[i];
-    }
-  }
+  VecN(const std::vector<T> &vd) : vdata(vd) {}
   /*! Tested */
   VecN(unsigned int s) {
 
@@ -69,8 +64,8 @@ public:
     }
   }
   /*! Tested */
-  bool size(std::size_t &out) const {
-    out = vdata.size();
+  bool size(unsigned int &out) const {
+    out = static_cast<unsigned int>(vdata.size());
     return true;
   }
   /*! Tested */
@@ -115,150 +110,113 @@ public:
     vout = VecN<T>(out);
     return true;
   }
-  /*! Tested */
-  bool add(T v, std::vector<T> &out) const {
+  bool apply_el(T v, std::vector<T> &out,
+                const std::function<T(T, T)> &fn) const {
     if (out.size() != vdata.size()) {
       out.resize(vdata.size());
     }
     for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] + v;
+      out[i] = fn(vdata[i], v);
     }
     return true;
   }
-  /*! Tested */
-  bool add(T v, VecN<T> &vout) const {
+  bool apply_el(const std::vector<T> &v, std::vector<T> &out,
+                const std::function<T(T, T)> &fn) const {
+    if (v.size() != vdata.size())
+      return false;
+    if (vdata.size() != out.size()) {
+      out.resize(vdata.size());
+    }
+    for (unsigned int i = 0; i < vdata.size(); i++) {
+      out[i] = fn(vdata[i], v[i]);
+    }
+    return true;
+  }
+  bool apply_el(T v, VecN<T> &vout, const std::function<T(T, T)> &fn) const {
     std::vector<T> out;
-    bool result = add(v, out);
+    bool result = apply_el(v, out, fn);
     if (result == false)
       return result;
     vout = VecN<T>(out);
     return true;
+  }
+  bool apply_el(const VecN<T> &v, VecN<T> &vout,
+                const std::function<T(T, T)> &fn) const {
+    unsigned int vsize;
+    v.size(vsize);
+    if (vsize != vdata.size())
+      return false;
+    vout.size(vsize);
+    if (vsize != vdata.size()) {
+      vout = VecN<T>(static_cast<unsigned int>(vdata.size()));
+    }
+    for (unsigned int i = 0; i < vdata.size(); i++) {
+      T tout = static_cast<T>(0);
+      v.get(i, tout);
+      vout.set(i, fn(vdata[i], tout));
+    }
+    return true;
+  }
+  /*! Tested */
+  bool add(T v, std::vector<T> &out) const {
+    auto fn = [](T thisel, T argel) { return thisel + argel; };
+    return apply_el(v, out, fn);
+  }
+
+  /*! Tested */
+  bool add(T v, VecN<T> &vout) const {
+    auto fn = [](T thisel, T argel) { return thisel + argel; };
+    return apply_el(v, vout, fn);
   }
   /*! Tested */
   bool add(const std::vector<T> &v, std::vector<T> &out) const {
-    if (v.size() != vdata.size())
-      return false;
-    if (vdata.size() != out.size()) {
-      out.resize(vdata.size());
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] + v[i];
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel + argel; };
+    return apply_el(v, out, fn);
   }
   /*! Tested */
   bool add(const VecN<T> &v, VecN<T> &out) const {
-    std::size_t vsize;
-    v.size(vsize);
-    if (vsize != vdata.size())
-      return false;
-    out.size(vsize);
-    if (vsize != vdata.size()) {
-      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      T vout = static_cast<T>(0);
-      v.get(i, vout);
-      out.set(i, vdata[i] + vout);
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel + argel; };
+    return apply_el(v, out, fn);
   }
-
   //
   bool subtract(T v, std::vector<T> &out) const {
-    if (out.size() != vdata.size()) {
-      out.resize(vdata.size());
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] - v;
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel - argel; };
+    return apply_el(v, out, fn);
   }
   /*! Tested */
   bool subtract(T v, VecN<T> &vout) const {
-    std::vector<T> out;
-    bool result = subtract(v, out);
-    if (result == false)
-      return result;
-    vout = VecN<T>(out);
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel - argel; };
+    return apply_el(v, vout, fn);
   }
   /*! Tested */
   bool subtract(const std::vector<T> &v, std::vector<T> &out) const {
-    if (v.size() != vdata.size())
-      return false;
-    if (vdata.size() != out.size()) {
-      out.resize(vdata.size());
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] - v[i];
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel - argel; };
+    return apply_el(v, out, fn);
   }
   /*! Tested */
   bool subtract(const VecN<T> &v, VecN<T> &out) const {
-    std::size_t vsize;
-    v.size(vsize);
-    if (vsize != vdata.size())
-      return false;
-    out.size(vsize);
-    if (vsize != vdata.size()) {
-      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      T vout = static_cast<T>(0);
-      v.get(i, vout);
-      out.set(i, vdata[i] - vout);
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel - argel; };
+    return apply_el(v, out, fn);
   }
   //
   bool multiply(T v, std::vector<T> &out) const {
-    if (out.size() != vdata.size()) {
-      out.resize(vdata.size());
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] * v;
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel * argel; };
+    return apply_el(v, out, fn);
   }
   /*! Tested */
   bool multiply(T v, VecN<T> &vout) const {
-    std::vector<T> out;
-    bool result = multiply(v, out);
-    if (result == false)
-      return result;
-    vout = VecN<T>(out);
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel * argel; };
+    return apply_el(v, vout, fn);
   }
   /*! Tested */
   bool multiply(const std::vector<T> &v, std::vector<T> &out) const {
-    if (v.size() != vdata.size())
-      return false;
-    if (vdata.size() != out.size()) {
-      out.resize(vdata.size());
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] * v[i];
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel * argel; };
+    return apply_el(v, out, fn);
   }
   /*! Tested */
   bool multiply(const VecN<T> &v, VecN<T> &out) const {
-    std::size_t vsize;
-    v.size(vsize);
-    if (vsize != vdata.size())
-      return false;
-    out.size(vsize);
-    if (vsize != vdata.size()) {
-      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      T vout = static_cast<T>(0);
-      v.get(i, vout);
-      out.set(i, vdata[i] * vout);
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel * argel; };
+    return apply_el(v, out, fn);
   }
 
   //
@@ -266,50 +224,30 @@ public:
     if (v == static_cast<T>(0))
       return false;
 
-    if (out.size() != vdata.size()) {
-      out.resize(vdata.size());
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] / v;
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel / argel; };
+    return apply_el(v, out, fn);
   }
   /*! Tested */
   bool divide(T v, VecN<T> &vout) const {
     // check for zero division
     if (v == static_cast<T>(0))
       return false;
-
-    std::vector<T> out;
-    bool result = divide(v, out);
-    if (result == false)
-      return result;
-    vout = VecN<T>(out);
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel / argel; };
+    return apply_el(v, vout, fn);
   }
   /*! Tested */
   bool divide(const std::vector<T> &v, std::vector<T> &out) const {
-    if (v.size() != vdata.size())
-      return false;
     for (unsigned int j = 0; j < v.size(); j++) {
       if (v[j] == static_cast<T>(0))
         return false;
     }
-    if (vdata.size() != out.size()) {
-      out.resize(vdata.size());
-    }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = vdata[i] / v[i];
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel / argel; };
+    return apply_el(v, out, fn);
   }
   /*! Tested */
   bool divide(const VecN<T> &v, VecN<T> &out) const {
-    std::size_t vsize;
+    unsigned int vsize = 0;
     v.size(vsize);
-    // check size
-    if (vsize != vdata.size())
-      return false;
     // check zero division
     for (unsigned int j = 0; j < vsize; j++) {
       T vout = static_cast<T>(0);
@@ -317,20 +255,9 @@ public:
       if (vout == static_cast<T>(0))
         return false;
     }
-    // check out size
-    out.size(vsize);
-    if (vsize != vdata.size()) {
-      out = VecN<T>(static_cast<unsigned int>(vdata.size()));
-    }
-    // do op
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      T vout = static_cast<T>(0);
-      v.get(i, vout);
-      out.set(i, vdata[i] / vout);
-    }
-    return true;
+    auto fn = [](T thisel, T argel) { return thisel / argel; };
+    return apply_el(v, out, fn);
   }
-
   bool dot(const T &v, T &out) const {
     out = static_cast<T>(0);
     for (unsigned int i = 0; i < vdata.size(); i++) {
@@ -349,7 +276,7 @@ public:
   }
   bool dot(const VecN<T> &v, T &out) const {
 
-    std::size_t vsize;
+    unsigned int vsize = 0;
     v.size(vsize);
     // check size
     if (vsize != vdata.size())
@@ -364,11 +291,12 @@ public:
     return true;
   }
 
-  // bool cross(const std::vector<T> &v, std::vector<T> &out) const {}
+  // bool cross(const std::vector<T> &v, std::vector<T>
+  // &out) const {}
 
 private:
-  bool n_n_matrix(unsigned int n, std::vector<std::vector<T> > &out) const {
-    std::vector<std::vector<T> > mat;
+  bool n_n_matrix(unsigned int n, std::vector<std::vector<T>> &out) const {
+    std::vector<std::vector<T>> mat;
     mat.resize(n);
     for (unsigned int i = 0; i < n; i++) {
       std::vector<T> row;

@@ -1,5 +1,5 @@
 # vepp
-Simple, tested, header only vector library for C++98
+Simple, tested, header only vector library for C++11
 
 It should be fairly easy to use and integrate into existing projects.
 It has a very C like api design. You can safely wrap all function calls with a

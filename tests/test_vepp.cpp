@@ -12,9 +12,9 @@ using namespace vepp;
 
 CTEST(suite, test_empty_constructor) {
   VecN<real> v;
-  std::size_t vsize;
+  unsigned int vsize = 5;
   v.size(vsize);
-  ASSERT_EQUAL(vsize, static_cast<std::size_t>(0));
+  ASSERT_EQUAL(vsize, static_cast<unsigned int>(0));
 }
 
 CTEST(suite, test_vector_constructor) {
@@ -33,7 +33,7 @@ CTEST(suite, test_vector_constructor) {
   VecN<real> v(tvec);
   real t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0;
   // test size
-  std::size_t vsize;
+  unsigned int vsize = 6156;
   v.size(vsize);
   ASSERT_EQUAL(vsize, 5);
 
