@@ -37,6 +37,8 @@ SOFTWARE.
 
 #ifndef VEPP_HPP
 #define VEPP_HPP
+#include <array>
+#include <cstdint>
 #include <functional>
 #include <math.h>
 #include <ostream>
@@ -45,50 +47,82 @@ SOFTWARE.
 
 namespace vepp {
 
-template <class T> class VecN {
+/** VecN operator flags*/
+enum VECN_FLAG : std::uint_least8_t {
+  SUCCESS = 1,
+  SIZE_ERROR = 2,
+  INDEX_ERROR = 3,
+  INCORRECT_ARG_ERROR = 4
+};
+std::ostream &operator<<(std::ostream &out, const VECN_FLAG &flag) {
+  switch (flag) {
+  case SUCCESS: {
+    out << "SUCCESS";
+    break;
+  }
+  case INDEX_ERROR: {
+    out << "INDEX_ERROR";
+    break;
+  }
+  case INCORRECT_ARG_ERROR: {
+    out << "INCORRECT_ARG_ERROR";
+    break;
+  }
+  case SIZE_ERROR: {
+    out << "SIZE_ERROR";
+    break;
+  }
+  }
+  return out;
+}
+
+template <class T, std::size_t N> class VecN {
   /** holds the vector data*/
-  std::vector<T> vdata;
+  std::array<T, N> data;
 
 public:
   /*! Tested */
   VecN() {}
   /*! Tested */
-  VecN(const std::vector<T> &vd) : vdata(vd) {}
-  /*! Tested */
+  VecN(const std::vector<T> &vd) {
+    unsigned int nb_s =
+        vd.size() < N ? static_cast<unsigned int>(vd.size()) : N;
+    for (unsigned int i = 0; i < nb_s; i++) {
+      data[i] = vd[i];
+    }
+  } /*! Tested */
   VecN(unsigned int s) {
-
-    vdata.clear();
-    vdata.resize(static_cast<std::size_t>(s));
-    for (unsigned int i = 0; i < s; i++) {
-      vdata[i] = static_cast<T>(0);
+    unsigned int nb_s = s < N ? s : N;
+    for (unsigned int i = 0; i < nb_s; i++) {
+      data[i] = static_cast<T>(0);
     }
   }
   /*! Tested */
-  bool size(unsigned int &out) const {
-    out = static_cast<unsigned int>(vdata.size());
-    return true;
+  VECN_FLAG size(unsigned int &out) const {
+    out = static_cast<unsigned int>(data.size());
+    return SUCCESS;
   }
   /*! Tested */
-  bool get(unsigned int index, T &out) const {
-    if (index >= vdata.size()) {
-      return false;
+  VECN_FLAG get(unsigned int index, T &out) const {
+    if (index >= data.size()) {
+      return INDEX_ERROR;
     }
-    out = vdata[index];
-    return true;
+    out = data[index];
+    return SUCCESS;
   }
   /*! Tested */
-  bool set(unsigned int index, T el) {
-    if (index >= vdata.size()) {
-      return false;
+  VECN_FLAG set(unsigned int index, T el) {
+    if (index >= data.size()) {
+      return INDEX_ERROR;
     }
-    vdata[index] = el;
-    return true;
+    data[index] = el;
+    return SUCCESS;
   }
   /*! Tested */
-  static bool base(unsigned int nb_dimensions, unsigned int base_order,
-                   std::vector<T> &out) {
+  static VECN_FLAG base(unsigned int nb_dimensions, unsigned int base_order,
+                        std::vector<T> &out) {
     if (base_order >= nb_dimensions)
-      return false;
+      return INCORRECT_ARG_ERROR;
     //
     if (out.size() != nb_dimensions) {
       out.clear();
@@ -98,154 +132,155 @@ public:
       out[i] = static_cast<T>(0);
     }
     out[base_order] = static_cast<T>(1);
-    return true;
+    return SUCCESS;
   }
   /*! Tested */
-  static bool base(unsigned int nb_dimensions, unsigned int base_order,
-                   VecN<T> &vout) {
+  static VECN_FLAG base(unsigned int base_order, VecN<T, N> &vout) {
     std::vector<T> out;
-    bool result = VecN<T>::base(nb_dimensions, base_order, out);
-    if (result == false)
+    VECN_FLAG result =
+        VecN<T, N>::base(static_cast<unsigned int>(N), base_order, out);
+    if (result != SUCCESS)
       return result;
-    vout = VecN<T>(out);
-    return true;
+    vout = VecN<T, N>(out);
+    return SUCCESS;
   }
-  bool apply_el(T v, std::vector<T> &out,
-                const std::function<T(T, T)> &fn) const {
-    if (out.size() != vdata.size()) {
-      out.resize(vdata.size());
+  VECN_FLAG apply_el(T v, std::vector<T> &out,
+                     const std::function<T(T, T)> &fn) const {
+    if (out.size() != data.size()) {
+      out.resize(data.size());
     }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = fn(vdata[i], v);
+    for (unsigned int i = 0; i < data.size(); i++) {
+      out[i] = fn(data[i], v);
     }
-    return true;
+    return SUCCESS;
   }
-  bool apply_el(const std::vector<T> &v, std::vector<T> &out,
-                const std::function<T(T, T)> &fn) const {
-    if (v.size() != vdata.size())
-      return false;
-    if (vdata.size() != out.size()) {
-      out.resize(vdata.size());
+  VECN_FLAG apply_el(const std::vector<T> &v, std::vector<T> &out,
+                     const std::function<T(T, T)> &fn) const {
+    if (v.size() != data.size())
+      return SIZE_ERROR;
+    if (data.size() != out.size()) {
+      out.resize(data.size());
     }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out[i] = fn(vdata[i], v[i]);
+    for (unsigned int i = 0; i < data.size(); i++) {
+      out[i] = fn(data[i], v[i]);
     }
-    return true;
+    return SUCCESS;
   }
-  bool apply_el(T v, VecN<T> &vout, const std::function<T(T, T)> &fn) const {
+  VECN_FLAG apply_el(T v, VecN<T, N> &vout,
+                     const std::function<T(T, T)> &fn) const {
     std::vector<T> out;
-    bool result = apply_el(v, out, fn);
-    if (result == false)
+    VECN_FLAG result = apply_el(v, out, fn);
+    if (result != SUCCESS)
       return result;
-    vout = VecN<T>(out);
-    return true;
+    vout = VecN<T, N>(out);
+    return SUCCESS;
   }
-  bool apply_el(const VecN<T> &v, VecN<T> &vout,
-                const std::function<T(T, T)> &fn) const {
+  VECN_FLAG apply_el(const VecN<T, N> &v, VecN<T, N> &vout,
+                     const std::function<T(T, T)> &fn) const {
     unsigned int vsize;
     v.size(vsize);
-    if (vsize != vdata.size())
-      return false;
+    if (vsize != data.size())
+      return SIZE_ERROR;
     vout.size(vsize);
-    if (vsize != vdata.size()) {
-      vout = VecN<T>(static_cast<unsigned int>(vdata.size()));
+    if (vsize != data.size()) {
+      vout = VecN<T, N>(static_cast<unsigned int>(data.size()));
     }
-    for (unsigned int i = 0; i < vdata.size(); i++) {
+    for (unsigned int i = 0; i < data.size(); i++) {
       T tout = static_cast<T>(0);
       v.get(i, tout);
-      vout.set(i, fn(vdata[i], tout));
+      vout.set(i, fn(data[i], tout));
     }
-    return true;
+    return SUCCESS;
   }
   /*! Tested */
-  bool add(T v, std::vector<T> &out) const {
+  VECN_FLAG add(T v, std::vector<T> &out) const {
     auto fn = [](T thisel, T argel) { return thisel + argel; };
     return apply_el(v, out, fn);
   }
 
   /*! Tested */
-  bool add(T v, VecN<T> &vout) const {
+  VECN_FLAG add(T v, VecN<T, N> &vout) const {
     auto fn = [](T thisel, T argel) { return thisel + argel; };
     return apply_el(v, vout, fn);
   }
   /*! Tested */
-  bool add(const std::vector<T> &v, std::vector<T> &out) const {
+  VECN_FLAG add(const std::vector<T> &v, std::vector<T> &out) const {
     auto fn = [](T thisel, T argel) { return thisel + argel; };
     return apply_el(v, out, fn);
   }
   /*! Tested */
-  bool add(const VecN<T> &v, VecN<T> &out) const {
+  VECN_FLAG add(const VecN<T, N> &v, VecN<T, N> &out) const {
     auto fn = [](T thisel, T argel) { return thisel + argel; };
     return apply_el(v, out, fn);
   }
   //
-  bool subtract(T v, std::vector<T> &out) const {
+  VECN_FLAG subtract(T v, std::vector<T> &out) const {
     auto fn = [](T thisel, T argel) { return thisel - argel; };
     return apply_el(v, out, fn);
   }
   /*! Tested */
-  bool subtract(T v, VecN<T> &vout) const {
+  VECN_FLAG subtract(T v, VecN<T, N> &vout) const {
     auto fn = [](T thisel, T argel) { return thisel - argel; };
     return apply_el(v, vout, fn);
   }
   /*! Tested */
-  bool subtract(const std::vector<T> &v, std::vector<T> &out) const {
+  VECN_FLAG subtract(const std::vector<T> &v, std::vector<T> &out) const {
     auto fn = [](T thisel, T argel) { return thisel - argel; };
     return apply_el(v, out, fn);
   }
   /*! Tested */
-  bool subtract(const VecN<T> &v, VecN<T> &out) const {
+  VECN_FLAG subtract(const VecN<T, N> &v, VecN<T, N> &out) const {
     auto fn = [](T thisel, T argel) { return thisel - argel; };
     return apply_el(v, out, fn);
   }
   //
-  bool multiply(T v, std::vector<T> &out) const {
+  VECN_FLAG multiply(T v, std::vector<T> &out) const {
     auto fn = [](T thisel, T argel) { return thisel * argel; };
     return apply_el(v, out, fn);
   }
   /*! Tested */
-  bool multiply(T v, VecN<T> &vout) const {
+  VECN_FLAG multiply(T v, VecN<T, N> &vout) const {
     auto fn = [](T thisel, T argel) { return thisel * argel; };
     return apply_el(v, vout, fn);
   }
   /*! Tested */
-  bool multiply(const std::vector<T> &v, std::vector<T> &out) const {
+  VECN_FLAG multiply(const std::vector<T> &v, std::vector<T> &out) const {
     auto fn = [](T thisel, T argel) { return thisel * argel; };
     return apply_el(v, out, fn);
   }
   /*! Tested */
-  bool multiply(const VecN<T> &v, VecN<T> &out) const {
+  VECN_FLAG multiply(const VecN<T, N> &v, VecN<T, N> &out) const {
     auto fn = [](T thisel, T argel) { return thisel * argel; };
     return apply_el(v, out, fn);
   }
 
   //
-  bool divide(T v, std::vector<T> &out) const {
+  VECN_FLAG divide(T v, std::vector<T> &out) const {
     if (v == static_cast<T>(0))
-      return false;
+      return INCORRECT_ARG_ERROR;
 
     auto fn = [](T thisel, T argel) { return thisel / argel; };
     return apply_el(v, out, fn);
   }
   /*! Tested */
-  bool divide(T v, VecN<T> &vout) const {
+  VECN_FLAG divide(T v, VecN<T, N> &vout) const {
     // check for zero division
     if (v == static_cast<T>(0))
-      return false;
+      return INCORRECT_ARG_ERROR;
     auto fn = [](T thisel, T argel) { return thisel / argel; };
     return apply_el(v, vout, fn);
   }
   /*! Tested */
-  bool divide(const std::vector<T> &v, std::vector<T> &out) const {
+  VECN_FLAG divide(const std::vector<T> &v, std::vector<T> &out) const {
     for (unsigned int j = 0; j < v.size(); j++) {
       if (v[j] == static_cast<T>(0))
-        return false;
+        return INCORRECT_ARG_ERROR;
     }
     auto fn = [](T thisel, T argel) { return thisel / argel; };
     return apply_el(v, out, fn);
   }
   /*! Tested */
-  bool divide(const VecN<T> &v, VecN<T> &out) const {
+  VECN_FLAG divide(const VecN<T, N> &v, VecN<T, N> &out) const {
     unsigned int vsize = 0;
     v.size(vsize);
     // check zero division
@@ -253,49 +288,49 @@ public:
       T vout = static_cast<T>(0);
       v.get(j, vout);
       if (vout == static_cast<T>(0))
-        return false;
+        return INCORRECT_ARG_ERROR;
     }
     auto fn = [](T thisel, T argel) { return thisel / argel; };
     return apply_el(v, out, fn);
   }
-  bool dot(const T &v, T &out) const {
+  VECN_FLAG dot(const T &v, T &out) const {
     out = static_cast<T>(0);
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out += vdata[i] * v;
+    for (unsigned int i = 0; i < data.size(); i++) {
+      out += data[i] * v;
     }
-    return true;
+    return SUCCESS;
   }
-  bool dot(const std::vector<T> &v, T &out) const {
-    if (v.size() != vdata.size())
-      return false;
+  VECN_FLAG dot(const std::vector<T> &v, T &out) const {
+    if (v.size() != data.size())
+      return SIZE_ERROR;
     out = static_cast<T>(0);
-    for (unsigned int i = 0; i < vdata.size(); i++) {
-      out += vdata[i] * v[i];
+    for (unsigned int i = 0; i < data.size(); i++) {
+      out += data[i] * v[i];
     }
-    return true;
+    return SUCCESS;
   }
-  bool dot(const VecN<T> &v, T &out) const {
+  VECN_FLAG dot(const VecN<T, N> &v, T &out) const {
 
     unsigned int vsize = 0;
     v.size(vsize);
     // check size
-    if (vsize != vdata.size())
-      return false;
+    if (vsize != data.size())
+      return SIZE_ERROR;
 
     out = static_cast<T>(0);
-    for (unsigned int i = 0; i < vdata.size(); i++) {
+    for (unsigned int i = 0; i < data.size(); i++) {
       T tout = static_cast<T>(0);
       v.get(i, tout);
-      out += vdata[i] * tout;
+      out += data[i] * tout;
     }
-    return true;
+    return SUCCESS;
   }
 
   // bool cross(const std::vector<T> &v, std::vector<T>
   // &out) const {}
 
 private:
-  bool n_n_matrix(unsigned int n, std::vector<std::vector<T>> &out) const {
+  VECN_FLAG n_n_matrix(unsigned int n, std::vector<std::vector<T>> &out) const {
     std::vector<std::vector<T>> mat;
     mat.resize(n);
     for (unsigned int i = 0; i < n; i++) {
@@ -307,9 +342,63 @@ private:
       }
     }
     out = mat;
-    return true;
+    return SUCCESS;
   }
 };
+
+#define CHECK(call)                                                            \
+  do {                                                                         \
+    VECN_FLAG res = call;                                                      \
+    return res == SUCCESS;                                                     \
+  } while (0)
+
+#define INFO(call)                                                             \
+  do {                                                                         \
+    VECN_FLAG res = call;                                                      \
+    switch (res) {                                                             \
+    case SUCCESS: {                                                            \
+      break;                                                                   \
+    }                                                                          \
+    case SIZE_ERROR: {                                                         \
+      std::cout << "SIZE_ERROR "                                               \
+                << " :: " << __FILE__ << " :: " << __LINE__ << std::endl;      \
+    }                                                                          \
+    case INDEX_ERROR: {                                                        \
+      std::cout << "INDEX_ERROR at "                                           \
+                << " :: " << __FILE__ << " :: " << __LINE__ << std::endl;      \
+    }                                                                          \
+    case INCORRECT_ARG_ERROR: {                                                \
+      std::cout << "INCORRECT_ARG_ERROR at "                                   \
+                << " :: " << __FILE__ << " :: " << __LINE__ << std::endl;      \
+    }                                                                          \
+    }                                                                          \
+    return res;                                                                \
+  } while (0)
+
+#define INFO_VERBOSE(call)                                                     \
+  do {                                                                         \
+    VECN_FLAG res = call;                                                      \
+    switch (res) {                                                             \
+    case SUCCESS: {                                                            \
+      std::cout << "SUCCESS" << std::endl;                                     \
+      break;                                                                   \
+    }                                                                          \
+    case SIZE_ERROR: {                                                         \
+      std::cout << "SIZE_ERROR "                                               \
+                << " :: " << __FILE__ << " :: " << __LINE__ << std::endl;      \
+    }                                                                          \
+    case INDEX_ERROR: {                                                        \
+      std::cout << "INDEX_ERROR "                                              \
+                << " :: " << __FILE__ << " :: " << __LINE__ << std::endl;      \
+    }                                                                          \
+    case INCORRECT_ARG_ERROR: {                                                \
+      std::cout << "INCORRECT_ARG_ERROR "                                      \
+                << " :: " << __FILE__ << " :: " << __LINE__ << std::endl;      \
+    }                                                                          \
+    }                                                                          \
+    return res;                                                                \
+  } while (0)
+
 } // namespace vepp
 
 #endif
