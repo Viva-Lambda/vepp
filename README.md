@@ -1,145 +1,95 @@
 # vepp
-Simple, tested, header only vector library for C++11
+Simple, tested, header only vector template for C++11
 
-It should be fairly easy to use and integrate into existing projects.
-It has a very C like api design. You can safely wrap all function calls with a
-debugging macro or code. For example:
+This is a very simple template for dealing with N dimensional vectors. The
+dimension is fixed at compile time to decrease the friction of usage for
+CUDA-C and OpenCL like APIs.
 
-```c++
-#include <ostream>
-#include <vector>
-#include "vepp.hpp"
-
-int main(){
-  std::vector<float> vin;
-  vin.resize(2);
-  vin[0] = static_cast<float>(2);
-  vin[1] = static_cast<float>(4);
-  vepp::VecN<float, 2> v(vin);
-  float c = 0.0f;
-  vepp:VECN_ r = v.get(0, c);
-
-  std::cout << c << std::endl;
-  // 2.0
-
-  std::cout << r << std::endl;
-  // 1 which is true
-
-  // trying to acces to an out of bounds index
-  r = v.get(10, c);
-
-  std::cout << r << std::endl;
-  // false
-
-  r = v.set(10, c);
-  std::cout << r << std::endl;
-  // false
-
-  return 0;
-}
-```
-
-Notice that we pass `2` as template parameter, so yes the `VecN` has a fixed
-size determined at the compile time. Internally we are using `array` as a
-container. This decreases the friction between `VecN` and APIs like CUDA-C,
-OpenCL, etc. Nevertheless, the user can pass a `vector` to most methods of
-`VecN`. If the size of the `vector` is not compatible with the operation we
-return `SIZE_ERROR`.
-
-As you might have guessed, we never throw exceptions. So `throw` does not
-occur anywhere in code. No explicit use of `new` and `delete` either.
-We don't resize output vectors if they are correctly sized as well. 
-For example:
+It has a very C like usage. General usage would be something like:
 
 ```c++
-#include <ostream>
-#include <vector>
 #include "vepp.hpp"
 
 int main(){
 
-std::vector<float> inv;
-  inv.resize(5);
-  inv[0] = 1;
-  inv[1] = 2;
-  inv[2] = 3;
-  inv[3] = 2;
-  inv[4] = 1;
-  vepp::VecN<real, 5> v(inv);
+  // define object
+  vepp::VecN<real, 5> v(1);
 
-  // resized output vector
+  // define output
   std::vector<real> out;
-  auto result_1 = v.add(1, out);
 
-  // not resized output vector
-  std::vector<real> nout;
-  nout.resize(5);
-  auto result_2 = v.add(1, nout);
+  // immutable method call, ie v does not change as a result of this operation
+  auto result = v.add(1, out).status;
 
-  std::cout << result_1 << std::endl;
-  // SUCCESS
-
-  std::cout << result_2 << std::endl;
-  // SUCCESS
-
-  std::cout << out[0] << " - " << nout[0] << std::endl;
-  // 2
-
-  std::cout << out[1] << " - " << nout[1] << std::endl;
-  // 3
-
-  std::cout << out[2] << " - " << nout[2] << std::endl;
-  // 4
-
-  std::cout << out[3] << " - " << nout[3] << std::endl;
-  // 3
-
-  std::cout << out[4] << " - " << nout[4] << std::endl;
-  // 2
-
+  // check status
+  if (result == vepp::SUCCESS){
+      // do further processing
+      std::cout << out[0] << std::endl;
+      std::cout << out[1] << std::endl;
+      std::cout << out[2] << std::endl;
+      std::cout << out[3] << std::endl;
+      std::cout << out[4] << std::endl;
+  }else{
+      return -1;
+  }
   return 0;
 }
+
 ```
 
-We also provide 3 simple debugging macros for wrapping calls:
+We have tested all the public methods. All methods return a result object.
+`Result` object contains essentially two things:
 
-- `CHECK`: returns a boolean if the call outputs `SUCCESS` flag
-- `INFO`: returns `VECN_FLAG` flag but shows out the file and line
-  information if the call outputs an error flag.
-- `INFO_VERBOSE`: returns `VECN_FLAG` flag but shows the file and line
-  information if the call outputs an error flag, also shows success message.
+- Operation status
+- Debugging information
 
-Here is a usage example:
+You can check the operation status by simply accessing to the `status`
+property of the object. It can be any of the following:
+```c++
+enum status_t : std::uint8_t {
+  SUCCESS = 1,
+  SIZE_ERROR = 2,
+  INDEX_ERROR = 3,
+  ARG_ERROR = 4,
+  NOT_CALLED = 5,
+  NOT_IMPLEMENTED = 6
+};
+```
+
+`INDEX_ERROR` signals an illegal access or set to a position which is
+not covered by the current vector.
+
+`SIZE_ERROR` signals an illegal usage of arguments whose sizes are not adapted to
+demanded operation.
+
+`ARG_ERROR` signals an illegal usage of arguments that is not related to size.
+For example a zero division would be considered as an `ARG_ERROR`.
+
+`NOT_CALLED` signals that the `Result` object does not result from a method
+call.
+
+`NOT_IMPLEMENTED` signals that the method has not been implemented yet.
+
+
+All functions except `set` are qualified by `const`.
+As long as you don't call set anywhere you won't be modifying the created
+objects. We also provide several wrapper functions to ease of usage. Notably
+the `CHECK` function takes in a `Result` object and outputs a boolean value.
+The intended usage would be something like:
 
 ```c++
-#include <ostream>
-#include <vector>
 #include "vepp.hpp"
 
 int main(){
-  std::vector<float> vin;
-  vin.resize(2);
-  vin[0] = static_cast<float>(2);
-  vin[1] = static_cast<float>(4);
-  vepp::VecN<float, 2> v(vin);
-  float c = 0.0f;
-  bool r = CHECK(v.get(0, c));
-
-  std::cout << c << std::endl;
-  // 2.0
-
-  std::cout << r << std::endl;
+  VecN<real, 2> v;
+  unsigned int vsize = 5;
+  bool vflag = CHECK(v.size(vsize));
+  std::cout << vflag << std::endl;
   // true
 
-  // trying to acces to an out of bounds index
-  auto res = INFO(v.get(10, c));
-  // INDEX_ERROR :: myfile.cpp :: 10
-
-  res = INFO(v.set(10, c));
-  // INDEX_ERROR :: myfile.cpp :: 10
-
   return 0;
 }
 
 ```
-
+There are also `INFO` and `INFO_VERBOSE`. Their usage is mostly the same, with
+the exception that they output a result object rather than a boolean.
