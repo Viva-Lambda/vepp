@@ -125,7 +125,16 @@ CTEST(suite, test_add_debug_check_false) {
   auto result = CHECK(v.add(avec, out));
   ASSERT_EQUAL(result, false);
 }
-
+CTEST(suite, test_debug_check_m_true) {
+  VecN<real, 2> v;
+  unsigned int vsize = 5;
+  Result res;
+  CHECK_M(v.size(vsize), res);
+  ASSERT_EQUAL(res.success, true);
+  std::string cname = "v.size(vsize)";
+  std::string rcname = res.call_name;
+  ASSERT_EQUAL(rcname == cname, true);
+}
 
 /*! @} */
 

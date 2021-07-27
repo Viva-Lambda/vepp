@@ -63,12 +63,18 @@ struct Result {
   unsigned int line_info = 0;
   std::string file_name = "";
   std::string fn_name = "";
+  std::string call_name = "";
+
+  bool success = false;
+
   Result() {}
   Result(unsigned int l, const std::string &f, const std::string &fn,
          status_t s)
-      : status(s), line_info(l), file_name(f), fn_name(fn) {}
+      : status(s), line_info(l), file_name(f), fn_name(fn),
+        success(s == SUCCESS) {}
   Result(unsigned int l, const char *f, const char *fn, status_t s)
-      : status(s), line_info(l), file_name(f), fn_name(fn) {}
+      : status(s), line_info(l), file_name(f), fn_name(fn),
+        success(s == SUCCESS) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const Result &flag) {
@@ -127,6 +133,7 @@ public:
       }
     }
   } /*! Tested */
+  VecN(const std::array<T, N> &arr) : data(arr) {}
   VecN(T s) {
     for (unsigned int i = 0; i < N; i++) {
       data[i] = static_cast<T>(s);
@@ -475,6 +482,14 @@ private:
 
 bool CHECK(Result res) { return res.status == SUCCESS; }
 
+#define CHECK_M(call, res)                                                     \
+  do {                                                                         \
+    res = call;                                                                \
+    res.call_name = #call;                                                     \
+    res.line_info = __LINE__;                                                  \
+    res.file_name = __FILE__;                                                  \
+  } while (0)
+
 Result INFO(Result res) {
   res.line_info = __LINE__;
   res.file_name = __FILE__;
@@ -484,6 +499,16 @@ Result INFO(Result res) {
   }
   return res;
 }
+
+#define INFO_M(call, res)                                                      \
+  do {                                                                         \
+    res = call;                                                                \
+    res = INFO(res);                                                           \
+    res.call_name = #call;                                                     \
+    res.line_info = __LINE__;                                                  \
+    res.file_name = __FILE__;                                                  \
+  } while (0)
+
 Result INFO_VERBOSE(Result res) {
   res.line_info = __LINE__;
   res.file_name = __FILE__;
@@ -491,6 +516,14 @@ Result INFO_VERBOSE(Result res) {
             << " :: " << res.line_info << std::endl;
   return res;
 }
+#define INFO_VERBOSE_M(call, res)                                              \
+  do {                                                                         \
+    res = call;                                                                \
+    res = INFO_VERBOSE(res);                                                   \
+    res.call_name = #call;                                                     \
+    res.line_info = __LINE__;                                                  \
+    res.file_name = __FILE__;                                                  \
+  } while (0)
 
 } // namespace vepp
 
